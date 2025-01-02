@@ -2,6 +2,10 @@
 
 A professional Django-based content creation tool that leverages AI for generating and managing multimedia content.
 
+![scrnli_2XPk5hIx1UxH1A](https://github.com/user-attachments/assets/65c701ed-b6cf-4a05-b097-4bad3f1a5233)
+![scrnli_mIAJlfIoluXYW7](https://github.com/user-attachments/assets/775586e6-3326-4165-8c62-f6d6265f64cb)
+
+
 ## Features
 
 - AI-powered content generation
