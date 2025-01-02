@@ -1,0 +1,480 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .content-form {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+    }
+    .main-section {
+      grid-column: 1;
+    }
+    .sidebar-section {
+      grid-column: 2;
+    }
+    .card {
+      margin-bottom: 20px;
+    }
+    .card-body {
+      padding: 20px;
+    }
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .form-group {
+      flex: 1;
+    }
+    .form-group.col-md-4 {
+      flex-basis: 33.33%;
+    }
+    .form-group.col-md-6 {
+      flex-basis: 50%;
+    }
+    .form-group.col-md-12 {
+      flex-basis: 100%;
+    }
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 20px;
+    }
+    .asset-item {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .asset-preview {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .asset-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+    .asset-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .analytics-section {
+      margin-top: 20px;
+    }
+    .save-actions {
+      margin-top: 20px;
+    }
+    .form-sections-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  </style>
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script src="{% static 'admin/js/content_dashboard.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="content-form">
+  <div class="form-sections-container">
+    <div class="main-section">
+      <!-- Main Content Section -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-info-circle"></i> Basic Information</h3>
+        </div>
+        <div class="card-body">
+          <form id="content-form" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="title" aria-describedby="titleHelp">Title</label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ original.title|default:'' }}" required aria-required="true">
+                <div id="titleHelp" class="form-text">Enter the title of the content.</div>
+              </div>
+              <div class="form-group col-md-4">
+                <label for="content_type" aria-describedby="contentTypeHelp">Content Type</label>
+                <select class="form-select" id="content_type" name="content_type" required aria-required="true">
+                  {% for type in content_types %}
+                    <option value="{{ type.id }}" {% if original.content_type_id == type.id %}selected{% endif %}>
+                      {{ type.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div id="contentTypeHelp" class="form-text">Select the type of content.</div>
+              </div>
+              <div class="form-group col-md-4">
+                <label for="creator" aria-describedby="creatorHelp">Creator</label>
+                <select class="form-select" id="creator" name="creator" required aria-required="true">
+                  {% for user in available_users %}
+                    <option value="{{ user.id }}" {% if original.creator_id == user.id %}selected{% endif %}>
+                      {{ user.username }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div id="creatorHelp" class="form-text">Select the creator of the content.</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="status" aria-describedby="statusHelp">Status</label>
+                <select class="form-select" id="status" name="status">
+                  {% for status_code, status_label in original.STATUS_CHOICES %}
+                    <option value="{{ status_code }}" {% if original.status == status_code %}selected{% endif %}>
+                      {{ status_label }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div id="statusHelp" class="form-text">Select the status of the content.</div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Content Details -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-file-alt"></i> Content Details</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group col-md-12">
+              <label for="script" aria-describedby="scriptHelp">Script/Description</label>
+              <textarea class="form-control" id="script" name="script" rows="4" aria-describedby="scriptHelp">{{ original.script|default:'' }}</textarea>
+              <div id="scriptHelp" class="form-text">Enter the script or description of the content.</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label for="duration" aria-describedby="durationHelp">Duration (seconds)</label>
+              <input type="number" class="form-control" id="duration" name="duration" value="{{ original.duration|default:60 }}" min="1" aria-describedby="durationHelp">
+              <div id="durationHelp" class="form-text">Enter the duration of the content in seconds.</div>
+            </div>
+            <div class="form-group col-md-4">
+              <label for="scheduled_time" aria-describedby="scheduledTimeHelp">Schedule Time (optional)</label>
+              <input type="datetime-local" class="form-control" id="scheduled_time" name="scheduled_time" 
+                     value="{{ original.scheduled_time|date:'Y-m-d\TH:i'|default:'' }}" aria-describedby="scheduledTimeHelp">
+              <div id="scheduledTimeHelp" class="form-text">Enter the scheduled time of the content.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Media Files -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-photo-video"></i> Media Files</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="video_file" aria-describedby="videoFileHelp">Video File</label>
+              {% if original.video_file %}
+                <div class="current-file mb-2">
+                  <video src="{{ original.video_file.url }}" controls class="preview-video"></video>
+                </div>
+              {% endif %}
+              <input type="file" class="form-control" id="video_file" name="video_file" accept="video/*" aria-describedby="videoFileHelp">
+              <div id="videoFileHelp" class="form-text">Select a video file.</div>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="thumbnail" aria-describedby="thumbnailHelp">Thumbnail</label>
+              {% if original.thumbnail %}
+                <div class="current-file mb-2">
+                  <img src="{{ original.thumbnail.url }}" alt="Current thumbnail" class="preview-image">
+                </div>
+              {% endif %}
+              <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*" aria-describedby="thumbnailHelp">
+              <div id="thumbnailHelp" class="form-text">Select a thumbnail image.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Processing Information -->
+      <div class="card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-clock"></i> Processing Information
+            <button type="button" class="btn btn-sm btn-link float-end" data-bs-toggle="collapse" data-bs-target="#processingInfo">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </h3>
+        </div>
+        <div class="card-body collapse" id="processingInfo">
+          <div class="form-group">
+            <label>Processing Started</label>
+            <p class="form-control-static">{{ original.processing_started_at|default:"Not started" }}</p>
+          </div>
+
+          <div class="form-group">
+            <label>Processing Completed</label>
+            <p class="form-control-static">{{ original.processing_completed_at|default:"Not completed" }}</p>
+          </div>
+
+          <div class="form-group">
+            <label>Error Message</label>
+            <p class="form-control-static text-danger">{{ original.error_message|default:"No errors" }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metadata -->
+      <div class="card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-info"></i> Metadata
+            <button type="button" class="btn btn-sm btn-link float-end" data-bs-toggle="collapse" data-bs-target="#metadata">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </h3>
+        </div>
+        <div class="card-body collapse" id="metadata">
+          <div class="form-group">
+            <label>Created At</label>
+            <p class="form-control-static">{{ original.created_at }}</p>
+          </div>
+
+          <div class="form-group">
+            <label>Updated At</label>
+            <p class="form-control-static">{{ original.updated_at }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Asset Management -->
+      <div class="card">
+        <div class="card-header">
+          <h3>
+            <i class="fas fa-photo-video"></i> Content Assets
+            <button type="button" class="btn btn-sm btn-outline-primary float-end" id="add-asset">
+              <i class="fas fa-plus"></i> Add Asset
+            </button>
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="asset-grid" id="asset-grid">
+            {% for asset in content_assets %}
+            <div class="asset-item" data-asset-id="{{ asset.id }}">
+              <div class="asset-preview">
+                {% if asset.asset_type == 'image' %}
+                  <img src="{{ asset.file.url }}" alt="Asset preview">
+                {% elif asset.asset_type == 'video' %}
+                  <video src="{{ asset.file.url }}" controls></video>
+                {% elif asset.asset_type == 'audio' %}
+                  <audio src="{{ asset.file.url }}" controls></audio>
+                {% else %}
+                  <i class="fas fa-file fa-3x"></i>
+                {% endif %}
+              </div>
+              <div class="asset-info">
+                <span class="asset-type">{{ asset.get_asset_type_display }}</span>
+                <span class="asset-meta">Order: {{ asset.order }}</span>
+              </div>
+              <div class="asset-actions">
+                <button type="button" class="btn-icon edit-asset" title="Edit" aria-label="Edit asset">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" class="btn-icon delete-asset" title="Delete" aria-label="Delete asset">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Asset Analytics -->
+          <div class="analytics-section">
+            <h4><i class="fas fa-chart-pie"></i> Asset Analytics</h4>
+            <canvas id="assetAnalytics"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Section -->
+    <div class="sidebar-section">
+      <!-- AI Generation -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-robot"></i> AI Generation</h3>
+        </div>
+        <div class="card-body">
+          <div class="generation-section">
+            <div class="form-group">
+              <label for="prompt" aria-describedby="promptHelp">AI Prompt</label>
+              <textarea class="form-control" id="prompt" name="prompt" rows="3" 
+                        placeholder="Enter your prompt for AI content generation..." aria-describedby="promptHelp"></textarea>
+              <div id="promptHelp" class="form-text">Enter a prompt for AI content generation.</div>
+            </div>
+
+            <div class="progress-steps">
+              <div class="step" data-step="1">
+                <i class="fas fa-brain"></i>
+                <span>Processing</span>
+              </div>
+              <div class="step" data-step="2">
+                <i class="fas fa-cogs"></i>
+                <span>Generating</span>
+              </div>
+              <div class="step" data-step="3">
+                <i class="fas fa-check-circle"></i>
+                <span>Complete</span>
+              </div>
+            </div>
+
+            <div class="generation-progress">
+              <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+              </div>
+              <div class="progress-info">
+                <span class="status">Ready to start</span>
+                <span class="time-remaining"></span>
+              </div>
+            </div>
+
+            <div class="error-message alert alert-danger d-none"></div>
+
+            <button type="button" class="btn btn-primary w-100" id="start-generation" aria-label="Start AI generation">
+              <i class="fas fa-play"></i> Start Generation
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Services -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-cogs"></i> Enhanced Services</h3>
+        </div>
+        <div class="card-body">
+          <!-- Content Creation Service -->
+          <div class="service-item">
+            <h4><i class="fas fa-magic"></i> Content Creation</h4>
+            <div class="service-actions">
+              <button type="button" class="btn btn-outline-primary" id="validate-content" aria-label="Validate content">
+                <i class="fas fa-check-circle"></i> Validate
+              </button>
+              <button type="button" class="btn btn-outline-primary" id="enhance-content" aria-label="Enhance content">
+                <i class="fas fa-wand-magic-sparkles"></i> Enhance
+              </button>
+            </div>
+          </div>
+
+          <!-- Asset Management Service -->
+          <div class="service-item">
+            <h4><i class="fas fa-layer-group"></i> Asset Management</h4>
+            <div class="service-actions">
+              <button type="button" class="btn btn-outline-primary" id="optimize-assets" aria-label="Optimize assets">
+                <i class="fas fa-compress-arrows-alt"></i> Optimize
+              </button>
+              <button type="button" class="btn btn-outline-primary" id="analyze-assets" aria-label="Analyze assets">
+                <i class="fas fa-search"></i> Analyze
+              </button>
+            </div>
+          </div>
+
+          <!-- Content Orchestration -->
+          <div class="service-item">
+            <h4><i class="fas fa-sitemap"></i> Content Orchestration</h4>
+            <div class="service-actions">
+              <button type="button" class="btn btn-outline-primary" id="configure-batch" aria-label="Configure batch">
+                <i class="fas fa-tasks"></i> Batch Config
+              </button>
+              <button type="button" class="btn btn-outline-primary" id="schedule-content" aria-label="Schedule content">
+                <i class="fas fa-clock"></i> Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Actions -->
+  <div class="save-actions text-end mt-4">
+    <button type="button" class="btn btn-primary" onclick="document.getElementById('content-form').submit();" aria-label="Save Content">
+      <i class="fas fa-save"></i> Save
+    </button>
+    <button type="button" class="btn btn-outline-primary" onclick="window.location='{% url 'admin:content_content_changelist' %}'" aria-label="Cancel">
+      <i class="fas fa-times"></i> Cancel
+    </button>
+  </div>
+</div>
+
+<!-- Asset Upload Modal -->
+<div class="modal fade" id="assetModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Asset</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="asset-form">
+          <div class="form-group">
+            <label for="asset-type" aria-describedby="assetTypeHelp">Asset Type</label>
+            <select class="form-select" id="asset-type" required aria-describedby="assetTypeHelp">
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+              <option value="audio">Audio</option>
+              <option value="subtitle">Subtitle</option>
+              <option value="other">Other</option>
+            </select>
+            <div id="assetTypeHelp" class="form-text">Select the type of asset.</div>
+          </div>
+          <div class="form-group">
+            <label for="asset-file" aria-describedby="assetFileHelp">File</label>
+            <input type="file" class="form-control" id="asset-file" required aria-describedby="assetFileHelp">
+            <div id="assetFileHelp" class="form-text">Select a file for the asset.</div>
+          </div>
+          <div class="form-group">
+            <label for="asset-order" aria-describedby="assetOrderHelp">Display Order</label>
+            <input type="number" class="form-control" id="asset-order" value="0" min="0" aria-describedby="assetOrderHelp">
+            <div id="assetOrderHelp" class="form-text">Enter the display order of the asset.</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal" aria-label="Cancel">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="save-asset" aria-label="Save Asset">
+          Save Asset
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeContentForm({
+      contentId: '{{ original.id|default:"" }}',
+      csrfToken: '{{ csrf_token }}',
+      apiEndpoints: {
+        save: '{% url "admin:content_content_save" %}',
+        generate: '{% url "admin:content_content_generate" %}',
+        assets: '{% url "admin:content_content_assets" %}',
+        upload: '{% url "admin:content_content_upload_asset" %}'
+      },
+      assetAnalytics: {{ asset_analytics|safe }}
+    });
+  });
+</script>
+{% endblock %}

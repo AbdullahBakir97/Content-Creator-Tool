@@ -1,0 +1,434 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content %}
+<div class="content-dashboard">
+    <!-- Stats Overview -->
+    <div class="stats-overview">
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="100">
+            <div class="stat-icon">
+                <i class="fas fa-file-video"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ cl.result_count }}</h3>
+                <span class="stat-label">Total Content</span>
+                <div class="stat-trend positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>12.5%</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="200">
+            <div class="stat-icon warning">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ in_progress_count|default:"0" }}</h3>
+                <span class="stat-label">In Progress</span>
+                <div class="stat-trend warning">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>Active</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="300">
+            <div class="stat-icon success">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ completed_count|default:"0" }}</h3>
+                <span class="stat-label">Completed</span>
+                <div class="stat-trend positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>8.2%</span>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="400">
+            <div class="stat-icon info">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ success_rate|default:"0" }}%</h3>
+                <span class="stat-label">Success Rate</span>
+                <div class="stat-trend neutral">
+                    <i class="fas fa-minus"></i>
+                    <span>Stable</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content List Section -->
+    <div class="content-list-container" data-aos="fade-up" data-aos-delay="500">
+        <div class="section-header">
+            <div class="section-title">
+                <h2><i class="fas fa-list"></i> Content Management</h2>
+                <span class="section-subtitle">Manage and monitor your content</span>
+            </div>
+            <div class="section-actions">
+                {% if has_add_permission %}
+                    {% url cl.opts|admin_urlname:'add' as add_url %}
+                    <button class="btn btn-primary" onclick="window.location='{% add_preserved_filters add_url is_popup to_field %}'" aria-label="Create New Content">
+                        <i class="fas fa-plus"></i>
+                        <span>Create Content</span>
+                    </button>
+                {% endif %}
+                <button class="btn btn-secondary" id="batchActions" aria-label="Perform Batch Actions">
+                    <i class="fas fa-tasks"></i>
+                    <span>Batch Actions</span>
+                </button>
+                <button class="btn btn-secondary" id="exportData" aria-label="Export Data">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Enhanced Filters -->
+        <div class="advanced-filters">
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="contentSearch" placeholder="Search content by title, type, or status...">
+                    <button class="search-clear" type="button">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="filter-options">
+                <div class="filter-group">
+                    <label class="filter-label">Status</label>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="draft">Draft</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Type</label>
+                    <select id="typeFilter" class="filter-select">
+                        <option value="">All Types</option>
+                        {% for type in content_types %}
+                            <option value="{{ type.id }}">{{ type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Date Range</label>
+                    <select id="dateFilter" class="filter-select">
+                        <option value="">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content List -->
+        <div class="content-list">
+            {% block result_list %}
+                {% if action_form and actions_on_top and cl.show_admin_actions %}
+                    {% admin_actions %}
+                {% endif %}
+                <div class="list-wrapper">
+                    {% result_list cl %}
+                </div>
+                {% if action_form and actions_on_bottom and cl.show_admin_actions %}
+                    {% admin_actions %}
+                {% endif %}
+            {% endblock %}
+        </div>
+
+        <!-- Enhanced Pagination -->
+        {% block pagination %}
+            {% pagination cl %}
+        {% endblock %}
+    </div>
+
+    <!-- Analytics Section -->
+    <div class="analytics-section" data-aos="fade-up" data-aos-delay="600">
+        <div class="analytics-header">
+            <h3><i class="fas fa-chart-bar"></i> Content Analytics</h3>
+            <div class="analytics-actions">
+                <button class="btn btn-icon" title="Refresh">
+                    <i class="fas fa-sync"></i>
+                </button>
+                <button class="btn btn-icon" title="Download Report">
+                    <i class="fas fa-file-download"></i>
+                </button>
+            </div>
+        </div>
+        <div class="analytics-grid">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h4>Content Creation Trends</h4>
+                    <div class="chart-legend">
+                        <span class="legend-item">
+                            <i class="fas fa-circle"></i> Created
+                        </span>
+                        <span class="legend-item">
+                            <i class="fas fa-circle"></i> Completed
+                        </span>
+                    </div>
+                </div>
+                <canvas id="contentMetricsChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h4>Content Distribution</h4>
+                    <div class="chart-legend">
+                        <span class="legend-item">
+                            <i class="fas fa-circle"></i> Video
+                        </span>
+                        <span class="legend-item">
+                            <i class="fas fa-circle"></i> Audio
+                        </span>
+                        <span class="legend-item">
+                            <i class="fas fa-circle"></i> Text
+                        </span>
+                    </div>
+                </div>
+                <canvas id="contentTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Batch Actions Modal -->
+<div class="modal fade" id="batchActionsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tasks"></i>
+                    Batch Actions
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="batch-actions-list">
+                    <button class="batch-action-btn">
+                        <i class="fas fa-play"></i>
+                        <span>Generate Selected</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button class="batch-action-btn">
+                        <i class="fas fa-download"></i>
+                        <span>Download Selected</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button class="batch-action-btn danger">
+                        <i class="fas fa-trash"></i>
+                        <span>Delete Selected</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<style>
+.analytics-section {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.chart-container {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 20px;
+    height: 400px;
+    position: relative;
+}
+
+.chart-header {
+    margin-bottom: 15px;
+}
+
+.chart-header h4 {
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9em;
+}
+
+.legend-item i {
+    font-size: 10px;
+}
+
+canvas {
+    max-height: 300px !important;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize AOS
+    AOS.init({
+        duration: 800,
+        once: true
+    });
+
+    // Chart.js default configuration for dark theme
+    Chart.defaults.color = 'rgba(255, 255, 255, 0.8)';
+    Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.1)';
+
+    // Initialize metrics charts with enhanced styling
+    const metricsCtx = document.getElementById('contentMetricsChart');
+    if (metricsCtx) {
+        new Chart(metricsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Content Created',
+                    data: [12, 19, 3, 5, 2, 3],
+                    borderColor: 'rgb(45, 152, 218)',
+                    backgroundColor: 'rgba(45, 152, 218, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2
+                }, {
+                    label: 'Content Completed',
+                    data: [8, 15, 2, 4, 1, 2],
+                    borderColor: 'rgb(46, 204, 113)',
+                    backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        padding: 10,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.8)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.8)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    const typeCtx = document.getElementById('contentTypeChart');
+    if (typeCtx) {
+        new Chart(typeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Video', 'Audio', 'Text'],
+                datasets: [{
+                    data: [12, 19, 3],
+                    backgroundColor: [
+                        'rgb(45, 152, 218)',
+                        'rgb(46, 204, 113)',
+                        'rgb(155, 89, 182)'
+                    ],
+                    borderWidth: 0,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        padding: 10,
+                        displayColors: true
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+
+    // Initialize batch actions modal with enhanced functionality
+    const batchActionsBtn = document.getElementById('batchActions');
+    if (batchActionsBtn) {
+        batchActionsBtn.addEventListener('click', function() {
+            new bootstrap.Modal(document.getElementById('batchActionsModal')).show();
+        });
+    }
+
+    // Initialize search clear functionality
+    const searchInput = document.getElementById('contentSearch');
+    const searchClear = document.querySelector('.search-clear');
+    if (searchInput && searchClear) {
+        searchInput.addEventListener('input', function() {
+            searchClear.style.display = this.value ? 'flex' : 'none';
+        });
+        searchClear.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.focus();
+            this.style.display = 'none';
+        });
+    }
+});
+</script>
+{% endblock %}
